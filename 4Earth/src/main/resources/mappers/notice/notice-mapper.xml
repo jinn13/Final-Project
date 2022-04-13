@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="com.kh.earth.notice.model.dao.NoticeMapper">
+	<sql id="noticeListSql">
+		SELECT  N.NOTICE_NO, 
+		        M.ID, 
+		        N.NOTICE_TIT, 
+		        N.NOTICE_CONTENT, 
+		        N.NOTICE_COUNT, 
+		        N.ORIGINAL_FILENAME, 
+		        N.RENAMED_FILENAME, 
+		        N.DATE_WRITEN, 
+		        N.DATE_WRITEN_MODIFY, 
+		        N.NOTICE_STATUS 
+		FROM NOTICE N 
+		JOIN MEMBER M ON(N.WRITER_NO = M.NO) 
+		WHERE N.NOTICE_STATUS = 'Y' 
+	</sql>
+
+	<resultMap type="Notice" id="noticeListResultMap">
+		<id property="no" column="NOTICE_NO"/>
+		<result property="writerNo" column="WRITER_NO"/>
+		<result property="writerId" column="ID"/>
+		<result property="title" column="NOTICE_TIT"/>
+		<result property="content" column="NOTICE_CONTENT"/>
+		<result property="readCount" column="NOTICE_COUNT"/>
+		<result property="originalFileName" column="ORIGINAL_FILENAME"/>
+		<result property="renamedFileName" column="RENAMED_FILENAME"/>
+		<result property="createDate" column="DATE_WRITEN"/>
+		<result property="modifyDate" column="DATE_WRITEN_MODIFY"/>
+		<result property="status" column="NOTICE_STATUS"/>
+	</resultMap>
+	
+		<select id="findAll" parameterType="map" resultMap="noticeListResultMap">
+		<include refid="noticeListSql"/>
+		<choose>
+			<when test="writerId != null">
+				AND M.ID LIKE '%' || #{writer} || '%'
+			</when>
+			<when test="title != null">
+				AND N.NOTICE_TIT LIKE '%' || #{title} || '%'
+			</when>
+			<when test="content != null">
+				AND N.NOTICE_CONTENT LIKE '%' || #{content} || '%'
+			</when>
+		</choose>
+		ORDER BY N.NOTICE_NO DESC
+	</select>
+	
+	<select id="getNoticeCount" parameterType="map" resultType="_int">
+		SELECT COUNT(*) 
+		FROM NOTICE
+		WHERE NOTICE_STATUS = 'Y'
+		<choose>
+			<when test="writerId != null">
+				AND M.ID LIKE '%' || #{writer} || '%'
+			</when>
+			<when test="title != null">
+				AND NOTICE_TIT LIKE '%' || #{title} || '%'
+			</when>
+			<when test="content != null">
+				AND NOTICE_CONTENT LIKE '%' || #{content} || '%'
+			</when>
+		</choose>
+	</select>
+	
+	<select id="selectNoticeByNo" parameterType="_int" resultMap="noticeListResultMap">
+		SELECT N.NOTICE_NO,
+		       N.NOTICE_TIT,
+		       N.WRITER_NO,
+		       M.ID,
+		       N.NOTICE_COUNT,
+		       N.ORIGINAL_FILENAME,
+		       N.RENAMED_FILENAME,
+		       N.NOTICE_CONTENT,
+		       N.DATE_WRITEN, 
+		       N.DATE_WRITEN_MODIFY
+		FROM NOTICE N
+		JOIN MEMBER M ON(N.WRITER_NO = M.NO)
+		WHERE N.NOTICE_STATUS = 'Y' AND N.NOTICE_NO = #{no}
+	</select>
+	
+	
+	<insert id="insertNotice" parameterType="Notice"
+			useGeneratedKeys="true" keyProperty="no" keyColumn="NOTICE_NO">
+		INSERT INTO NOTICE (
+				NOTICE_NO, 
+				WRITER_NO,
+			  NOTICE_TIT, 
+			  NOTICE_CONTENT, 
+			  NOTICE_COUNT, 
+			  ORIGINAL_FILENAME, 
+			  RENAMED_FILENAME, 
+			  DATE_WRITEN, 
+			  DATE_WRITEN_MODIFY, 
+			  NOTICE_STATUS 
+		) VALUES (
+				SEQ_NOTICE_NO.NEXTVAL,
+				#{writerNo},
+				#{title},
+				#{content},
+				DEFAULT,
+				#{originalFileName},
+				#{renamedFileName},
+				DEFAULT,
+				DEFAULT,
+				DEFAULT
+		)
+	</insert>
+	
+	<select id="writeMove" parameterType="map" resultMap="noticeListResultMap">
+		<include refid="noticeListSql"/>
+		SELECT A.*
+		FROM (
+		    SELECT
+		        NOTICE_NO,
+		        NOTICE_TIT,
+		        NOTICE_STATUS,
+		        LEAD(NOTICE_NO, 1) OVER (ORDER BY NOTICE_NO DESC) AS NEXT_NO,
+		        LEAD(NOTICE_TIT, 1, '다음글이 없습니다') OVER (ORDER BY NOTICE_NO DESC) AS NEXT_TITLE,
+		        LAG(NOTICE_NO, 1) OVER (ORDER BY NOTICE_NO DESC) AS PRE_NO,
+		        LAG(NOTICE_TIT, 1, '이전글이 없습니다') OVER (ORDER BY NOTICE_NO DESC) AS PRE_TITLE
+		    FROM NOTICE) A
+
+		WHERE A.NOTICE_STATUS = 1;
+	</select>
+	
+	<update id="modifyNotice" parameterType="Notice">
+       	UPDATE NOTICE
+       	<trim prefix="SET" suffixOverrides=",">
+    	    <if test="title != null">
+		 		NOTICE_TIT = #{title},
+	 		</if>
+	 		<if test="content != null">
+		 		NOTICE_CONTENT = #{content},
+	 		</if>
+	 		<if test="originalFileName != null">
+		 		ORIGINAL_FILENAME = #{originalFileName},
+	 		</if>
+	 		<if test="renamedFileName != null">
+		 		RENAMED_FILENAME = #{renamedFileName},
+	 		</if>
+		 	DATE_WRITEN_MODIFY = SYSDATE 
+       	</trim>
+	 	WHERE 
+	 		NOTICE_NO = #{no}
+	</update>
+	
+	<update id="modifyStatus" parameterType="map">
+		UPDATE NOTICE SET NOTICE_STATUS = #{status} WHERE NOTICE_NO = #{no}
+	</update>
+	
+	
+	<!-- QNA --> 
+	<sql id="noticeQnaListSql">
+		SELECT  Q.QNA_NO, 
+		        M.ID, 
+		        Q.QNA_CAT,
+		        Q.QNA_TIT,
+		        C.C_NO,
+		        C.C_NAME, 
+		        Q.QNA_CONTENT, 
+		        Q.QNA_COUNT, 
+		        Q.ORIGINAL_FILENAME, 
+		        Q.RENAMED_FILENAME, 
+		        Q.DATE_WRITEN, 
+		        Q.DATE_WRITEN_MODIFY, 
+		        Q.QNA_STATUS
+		FROM QNA Q 
+		JOIN MEMBER M ON(Q.WRITER_NO = M.NO)
+		JOIN QNA_CATEGORY C ON(Q.QNA_CAT = C.C_NO)
+		WHERE Q.QNA_STATUS = 'Y' 
+	</sql>
+
+	<resultMap type="Qna" id="noticeQnaListResultMap">
+		<id property="no" column="QNA_NO"/>
+		<result property="writerNo" column="WRITER_NO"/>
+		<result property="writerId" column="ID"/>
+		<result property="cat" column="QNA_CAT"/>
+		<result property="categoryNo" column="C_NO"/>
+		<result property="category" column="C_NAME"/>
+		<result property="title" column="QNA_TIT"/>
+		<result property="content" column="QNA_CONTENT"/>
+		<result property="readCount" column="QNA_COUNT"/>
+		<result property="originalFileName" column="ORIGINAL_FILENAME"/>
+		<result property="renamedFileName" column="RENAMED_FILENAME"/>
+		<result property="createDate" column="DATE_WRITEN"/>
+		<result property="modifyDate" column="DATE_WRITEN_MODIFY"/>
+		<result property="status" column="QNA_STATUS"/>
+	</resultMap>
+	
+	
+	<select id="findAllQna" parameterType="map" resultMap="noticeQnaListResultMap">
+		<include refid="noticeQnaListSql"/>
+		<choose>
+			<when test="writerId != null">
+				AND M.ID LIKE '%' || #{writer} || '%'
+			</when>
+			<when test="title != null">
+				AND Q.QNA_TIT LIKE '%' || #{title} || '%'
+			</when>
+			<when test="content != null">
+				AND Q.QNA_CONTENT LIKE '%' || #{content} || '%'
+			</when>
+		</choose>
+		ORDER BY Q.QNA_NO DESC
+	</select>
+	
+	<select id="getQnaCount" parameterType="map" resultType="_int">
+		SELECT COUNT(*) 
+		FROM QNA
+		WHERE QNA_STATUS = 'Y'
+		<choose>
+			<when test="writerId != null">
+				AND M.ID LIKE '%' || #{writer} || '%'
+			</when>
+			<when test="title != null">
+				AND QNA_TIT LIKE '%' || #{title} || '%'
+			</when>
+			<when test="content != null">
+				AND QNA_CONTENT LIKE '%' || #{content} || '%'
+			</when>
+		</choose>
+	</select>
+	
+	<select id="selectQnaByNo" parameterType="_int" resultMap="noticeQnaListResultMap">
+		SELECT Q.QNA_NO,
+		       Q.QNA_TIT,
+		       Q.QNA_CAT,
+		       Q.WRITER_NO,
+		       M.ID,
+		       Q.QNA_COUNT,
+		       Q.ORIGINAL_FILENAME,
+		       Q.RENAMED_FILENAME,
+		       Q.QNA_CONTENT,
+		       Q.DATE_WRITEN, 
+		       Q.DATE_WRITEN_MODIFY
+		FROM QNA Q
+		JOIN MEMBER M ON(Q.WRITER_NO = M.NO)
+		WHERE Q.QNA_STATUS = 'Y' AND Q.QNA_NO = #{no}
+	</select>
+	
+	
+	<select id="getCategoryNo" parameterType="string" resultType="_int">
+		SELECT C_NO
+		FROM QNA_CATEGORY
+		WHERE C_NAME = #{category}
+	</select>
+	
+	
+	<insert id="qnaInsert" parameterType="Qna"
+			useGeneratedKeys="true" keyProperty="no" keyColumn="QNA_NO">
+		INSERT INTO QNA (
+				QNA_NO, 
+				WRITER_NO,
+				QNA_TIT,
+				QNA_CAT,
+			  QNA_CONTENT, 
+			  QNA_COUNT, 
+			  ORIGINAL_FILENAME, 
+			  RENAMED_FILENAME, 
+			  DATE_WRITEN, 
+			  DATE_WRITEN_MODIFY, 
+			  QNA_STATUS 
+		) VALUES (
+				SEQ_QNA_NO.NEXTVAL,
+				#{writerNo},
+				#{title},
+				#{categoryNo},
+				#{content},
+				DEFAULT,
+				#{originalFileName},
+				#{renamedFileName},
+				DEFAULT,
+				DEFAULT,
+				DEFAULT
+		)
+	</insert>
+	
+	<select id="qnaWriteMove" parameterType="map" resultMap="noticeQnaListResultMap">
+		<include refid="noticeQnaListSql"/>
+		SELECT A.*
+		FROM (
+		    SELECT
+		        QNA_NO,
+		        QNA_TIT,
+		        QNA_STATUS,
+		        LEAD(QNA_NO, 1) OVER (ORDER BY QNA_NO DESC) AS NEXT_NO,
+		        LEAD(QNA_TIT, 1, '다음글이 없습니다') OVER (ORDER BY QNA_NO DESC) AS NEXT_TITLE,
+		        LAG(QNA_NO, 1) OVER (ORDER BY QNA_NO DESC) AS PRE_NO,
+		        LAG(QNA_TIT, 1, '이전글이 없습니다') OVER (ORDER BY QNA_NO DESC) AS PRE_TITLE
+		    FROM NOTICE) A
+		WHERE A.NOTICE_STATUS = 1;
+	</select>
+	
+	<update id="qnaModify" parameterType="Qna">
+       	UPDATE QNA
+       	<trim prefix="SET" suffixOverrides=",">
+    	    <if test="title != null">
+		 		QNA_TIT = #{title},
+	 		</if>
+	 		<if test="content != null">
+		 		QNA_CONTENT = #{content},
+	 		</if>
+	 		<if test="originalFileName != null">
+		 		ORIGINAL_FILENAME = #{originalFileName},
+	 		</if>
+	 		<if test="renamedFileName != null">
+		 		RENAMED_FILENAME = #{renamedFileName},
+	 		</if>
+		 	DATE_WRITEN_MODIFY = SYSDATE 
+       	</trim>
+	 	WHERE 
+	 		QNA_NO = #{no}
+	</update>
+	
+	<update id="qnaModifyStatus" parameterType="map">
+		UPDATE QNA SET QNA_STATUS = #{status} WHERE QNA_NO = #{no}
+	</update>
+</mapper>

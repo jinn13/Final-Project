@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="com.kh.earth.member.model.dao.MemberMapper">
+	<sql id="selectMemberSql">
+		SELECT NO, 
+		    ID, 
+		    PASSWORD, 
+		    MEMBER_TYPE, 
+		    NAME, 
+		    PHONE, 
+		    EMAIL, 
+		    ADDRESS, 
+		    PLATFORM_TYPE, 
+		    STATUS, 
+		    IMG_NAME, 
+		    MODIFY_IMG_NAME, 
+		    ENROLL_DATE, 
+		    MODIFY_DATE,
+		    POSTCODE,
+            EXTRA_ADDRESS,
+            DETAIL_ADDRESS
+		FROM MEMBER
+	</sql>
+
+	<resultMap type="Member" id="memberResultMap">
+		<id property="no" column="NO"/>
+		<result property="id" column="ID"/>
+		<result property="password" column="PASSWORD"/>
+		<result property="member_type" column="MEMBER_TYPE"/>
+		<result property="name" column="NAME"/>
+		<result property="phone" column="PHONE"/>
+		<result property="email" column="EMAIL"/>
+		<result property="postcode" column="POSTCODE"/>
+		<result property="address" column="ADDRESS"/>
+		<result property="extra_address" column="EXTRA_ADDRESS"/>
+		<result property="detail_address" column="DETAIL_ADDRESS"/>
+		<result property="platform_type" column="PLATFORM_TYPE"/>
+		<result property="status" column="STATUS"/>
+		<result property="img_name" column="IMG_NAME"/>	
+		<result property="modify_img_name" column="MODIFY_IMG_NAME"/>		
+		<result property="enrollDate" column="ENROLL_DATE"/>
+		<result property="modifyDate" column="MODIFY_DATE"/>
+	</resultMap>
+
+	<select id="selectCount" resultType="_int">
+		SELECT COUNT(*) FROM MEMBER
+	</select>  
+  	
+  	<select id="selectAll" resultMap="memberResultMap">
+		  <include refid = "selectMemberSql" />
+		  WHERE STATUS = 'Y'
+  	</select>
+ 
+  	<select id="findMemberById" parameterType="string" resultMap="memberResultMap">
+		<include refid="selectMemberSql" />
+		WHERE ID=#{id} AND STATUS = 'Y'
+  	</select>
+  	
+  	<select id="findMemberById_forSNS" parameterType="string" resultMap="memberResultMap">
+		<include refid="selectMemberSql" />
+		WHERE ID=#{id}
+  	</select>
+  	
+  	<select id="findMemberByPhone" parameterType="string" resultMap="memberResultMap">
+		<include refid="selectMemberSql" />
+		WHERE PHONE=#{phone} AND STATUS = 'Y'
+  	</select>
+  	
+  	<select id="findMemberByPhoneForEdit" parameterType="map" resultMap="memberResultMap">
+		<include refid="selectMemberSql" />
+		WHERE PHONE=#{phone} AND ID NOT IN(#{id}) AND STATUS = 'Y'
+  	</select>
+  	
+  	<select id="findMemberByEmail" parameterType="string" resultMap="memberResultMap">
+		<include refid="selectMemberSql" />
+		WHERE EMAIL=#{email} AND STATUS = 'Y' AND PLATFORM_TYPE = 'HOMEPAGE'
+  	</select>
+  	
+  	<select id="findMemberByEmail_forEdit" parameterType="map" resultMap="memberResultMap">
+		<include refid="selectMemberSql" />
+		WHERE EMAIL=#{email} AND ID NOT IN(#{id}) AND STATUS = 'Y' AND PLATFORM_TYPE = 'HOMEPAGE'
+  	</select>
+  	
+  	<insert id="insertMember" parameterType="Member" 
+  			useGeneratedKeys="true" keyColumn="NO" keyProperty="no">
+		INSERT INTO MEMBER (
+		    NO, 
+		    ID, 
+		    PASSWORD, 
+		    MEMBER_TYPE,
+		    NAME, 
+		    PHONE, 
+		    EMAIL, 
+		    ADDRESS, 
+		    PLATFORM_TYPE, 
+		    STATUS, 
+		    IMG_NAME, 
+		    MODIFY_IMG_NAME, 
+		    ENROLL_DATE, 
+		    MODIFY_DATE,
+		    POSTCODE,
+            EXTRA_ADDRESS,
+            DETAIL_ADDRESS   
+		) VALUES(
+		    SEQ_UNO.NEXTVAL, 
+		    #{id}, 
+		    #{password}, 
+		    DEFAULT,
+		    #{name},
+		    #{phone},
+		    #{email},
+		    #{address},
+		    <choose>
+		    	<when test="platform_type != null">
+					#{platform_type},
+		    	</when>
+		    	<otherwise>
+		    		DEFAULT,
+		    	</otherwise>
+		    </choose>
+		    DEFAULT,
+		    #{img_name}, 
+		    #{modify_img_name}, 
+		    DEFAULT,
+		    DEFAULT,
+		    #{postcode},
+		    #{extra_address},
+		    #{detail_address}
+  		)
+  	</insert> 
+  	<update id="updateMember" parameterType="Member">
+  		UPDATE MEMBER 
+  		SET 
+  			NAME = #{name},
+  			PHONE = #{phone},
+  			EMAIL = #{email},
+  			POSTCODE = #{postcode},
+  			ADDRESS = #{address},
+  			EXTRA_ADDRESS = #{extra_address},
+  			DETAIL_ADDRESS = #{detail_address},
+  			IMG_NAME = #{img_name},
+            MODIFY_IMG_NAME = #{modify_img_name},
+  			MODIFY_DATE = SYSDATE 
+  		WHERE NO = #{no}
+  	</update>
+  	
+  	<delete id="deleteMember" parameterType="_int">
+  		UPDATE MEMBER
+  		SET
+  			STATUS = 'N'
+  		WHERE 
+  			NO = #{no}
+  	</delete>
+  	
+  	<update id="reSignup" parameterType="string">
+  		UPDATE MEMBER
+  		SET
+  			STATUS = 'Y'
+  		WHERE 
+  			ID = #{id}
+  	</update>
+  	
+  	<update id="updatePassword" parameterType="map">
+  		UPDATE MEMBER
+  		SET
+  			PASSWORD = #{password}
+  		WHERE 
+  			NO = #{no}
+  	</update>
+	
+</mapper>
